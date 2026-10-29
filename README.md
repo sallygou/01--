@@ -271,11 +271,13 @@ cp 88-工具箱/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-comm
 
 ### 分发状态（请务必核对，不要默认"网上一定有"）
 
-| 仓库 | GitHub 地址 | 可见性 | 与本地 HEAD 是否一致 |
+| 仓库 | GitHub 地址 | 可见性 | 同步状态 |
 | --- | --- | --- | --- |
-| `01-早鸟票公共仓`（本仓库） | https://github.com/sallygou/01-- | **Private** | 本地领先 2 个提交，待推送 |
-| `02-张若彤个人仓` | https://github.com/sallygou/02-- | **Private** | ✅ 已完全同步 |
-| `03-王小明个人仓` | https://github.com/sallygou/03-- | **Private** | ✅ 已完全同步 |
+| `01-早鸟票公共仓`（本仓库） | https://github.com/sallygou/01-- | **Private** | 每次 README 修订后需 `git push`，请用下方命令核对 |
+| `02-张若彤个人仓` | https://github.com/sallygou/02-- | **Private** | 已推送全部提交（含任务包六件与验收结论） |
+| `03-王小明个人仓` | https://github.com/sallygou/03-- | **Private** | 已推送全部提交（含任务包六件与交付物） |
+
+> 表格不便写死"领先几个提交"（写下的瞬间就可能过期）。**以命令为准**：`git fetch origin && git rev-list --left-right --count origin/main...main`——输出的后一个数字就是本地尚未推送的提交数，为 0 才代表 GitHub 与本地完全一致。
 
 > ⚠️ **老师能不能打开？** 三个仓库均为 **Private**，匿名访问会看到 **404 Page not found**。交作业前请二选一：
 > ① 在仓库 *Settings → Collaborators* 中把老师加为合作者；② 临时设为 *Public*（验完再改回）。
