@@ -1,0 +1,70 @@
+#!/bin/sh
+# ============================================================
+# Agent 协作规则校验 pre-commit Hook
+# 触发时机：git commit（在本仓库任意分支）
+# 行为：校验本次将要提交的 Markdown 单据/文档；有错误则阻止提交
+#      不删除、不覆盖、不强制提交、不推送
+# ============================================================
+
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+
+# 1. 定位 Python
+PY=""
+for c in python python3; do
+    if command -v "$c" >/dev/null 2>&1; then PY="$c"; break; fi
+done
+if [ -z "$PY" ]; then
+    echo "------------------------------------------------------------"
+    echo "[协作校验] 未找到可用的 Python，无法执行结构校验。"
+    echo "           请安装 Python 3 后重试；本次提交已中止。"
+    echo "------------------------------------------------------------"
+    exit 1
+fi
+
+# 2. 定位校验脚本（优先环境变量 → 本仓 → 同级公共仓）
+if [ -n "$AGENT_VALIDATOR" ] && [ -f "$AGENT_VALIDATOR" ]; then
+    VALIDATOR="$AGENT_VALIDATOR"
+elif [ -f "$REPO_ROOT/88-工具箱/validate.py" ]; then
+    VALIDATOR="$REPO_ROOT/88-工具箱/validate.py"
+elif [ -f "$REPO_ROOT/../01-早鸟票公共仓/88-工具箱/validate.py" ]; then
+    VALIDATOR="$REPO_ROOT/../01-早鸟票公共仓/88-工具箱/validate.py"
+else
+    echo "------------------------------------------------------------"
+    echo "[协作校验] 找不到校验脚本 validate.py，跳过校验（允许提交）。"
+    echo "           可将脚本置于 <公共仓>/88-工具箱/validate.py"
+    echo "------------------------------------------------------------"
+    exit 0
+fi
+
+# 3. 取出本次暂存的 Markdown 文件
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -i '\.md$')
+if [ -z "$STAGED" ]; then
+    exit 0
+fi
+
+FILES=""
+for f in $STAGED; do
+    if [ -f "$f" ]; then
+        FILES="$FILES $REPO_ROOT/$f"
+    fi
+done
+[ -z "$FILES" ] && exit 0
+
+echo "------------------------------------------------------------"
+echo "[协作校验] pre-commit 触发：校验脚本 $(basename "$VALIDATOR")"
+echo "------------------------------------------------------------"
+
+"$PY" "$VALIDATOR" $FILES < /dev/null
+RC=$?
+
+echo "------------------------------------------------------------"
+if [ $RC -ne 0 ]; then
+    echo "[协作校验] 校验未通过，提交已阻止。"
+    echo "           请按上述行号与修改建议修正后重新 git add && git commit。"
+    echo "           如需临时绕过（不推荐）：git commit --no-verify"
+    echo "------------------------------------------------------------"
+    exit 1
+fi
+echo "[协作校验] 全部通过，允许提交。"
+echo "------------------------------------------------------------"
+exit 0
