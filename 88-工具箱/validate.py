@@ -498,7 +498,13 @@ def main(argv):
     if "--repo-root" in argv:
         repo_root = argv[argv.index("--repo-root") + 1]
     targets = []
-    if "--all" in argv:
+    if "--stdin" in argv:
+        # 从标准输入逐行读取待校验文件路径（供 Hook 安全传递含中文/空格的路径）
+        for line in sys.stdin.read().splitlines():
+            line = line.strip()
+            if line:
+                targets.append(line)
+    elif "--all" in argv:
         base = repo_root or find_public_root(os.path.abspath(__file__))
         ws = os.path.dirname(base) if base else os.getcwd()
         for root, dirs, fs in os.walk(ws):
@@ -510,7 +516,7 @@ def main(argv):
         targets = args
 
     if not targets:
-        print("用法：python validate.py [--all] [文件.md ...]")
+        print("用法：python validate.py [--all | --stdin] [文件.md ...]")
         return 0
 
     anchor = repo_root or find_public_root(os.path.abspath(targets[0]))

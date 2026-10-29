@@ -37,24 +37,30 @@ else
 fi
 
 # 3. 取出本次暂存的 Markdown 文件
-STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -i '\.md$')
+#    注意：必须 -c core.quotepath=false，否则中文文件名会被 Git 转成八进制转义，
+#    导致后续路径判断失效（本 Hook 曾因此静默放行全部中文单据）。
+STAGED=$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACM | grep -i '\.md$')
 if [ -z "$STAGED" ]; then
     exit 0
 fi
 
-FILES=""
-for f in $STAGED; do
-    if [ -f "$f" ]; then
-        FILES="$FILES $REPO_ROOT/$f"
+# 组装绝对路径清单（逐行处理，兼容空格）
+LIST=""
+while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    if [ -f "$REPO_ROOT/$f" ]; then
+        LIST="$LIST$REPO_ROOT/$f\n"
     fi
-done
-[ -z "$FILES" ] && exit 0
+done <<EOF
+$STAGED
+EOF
+[ -z "$LIST" ] && exit 0
 
 echo "------------------------------------------------------------"
 echo "[协作校验] pre-commit 触发：校验脚本 $(basename "$VALIDATOR")"
 echo "------------------------------------------------------------"
 
-"$PY" "$VALIDATOR" $FILES < /dev/null
+printf "$LIST" | "$PY" "$VALIDATOR" --stdin < /dev/null
 RC=$?
 
 echo "------------------------------------------------------------"
